@@ -36,7 +36,7 @@ You can set different offset values for each application.
 
 The script automatically creates:
 
-    WindowCascade.ini
+    cascade_offsets.ini
 
 Location:  
 Same folder as the script.
@@ -127,7 +127,7 @@ AutoHotkey v2 用のウインドウカスケードツールです。
 
 スクリプトと同じフォルダに
 
-    WindowCascade.ini
+    cascade_offsets.ini
 
 が自動生成されます。
 
