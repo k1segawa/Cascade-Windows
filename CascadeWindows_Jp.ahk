@@ -23,7 +23,7 @@ F10 - アクティブウインドウのずらし量を設定
 - 最小化 / ツール / 子 / フルスクリーン除外
 
 設定ファイル:
-WindowCascade.ini（自動生成）
+cascade_offsets.ini（自動生成）
 
 ============================================================
 */
@@ -241,4 +241,5 @@ LoadConfig()
 
         OffsetConfig[section] := { w: Integer(w), h: Integer(h) }
     }
+
 }
