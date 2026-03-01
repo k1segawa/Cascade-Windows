@@ -22,7 +22,7 @@ Features:
 - Skips minimized / tool / child / fullscreen windows
 
 Config file:
-WindowCascade.ini (auto-created)
+cascade_offsets.ini (auto-created)
 
 ============================================================
 */
@@ -241,3 +241,4 @@ LoadConfig()
         OffsetConfig[section] := { w: Integer(w), h: Integer(h) }
     }
 }
+
