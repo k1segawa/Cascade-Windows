@@ -104,6 +104,7 @@ After saving, press F9 again anytime to apply.
 - The GUI window is excluded from cascade processing.
 - Offset stacking is cumulative (diagonal layout).
 - Designed to avoid layout conflicts with special system windows.
+- Blog:https://k1segawa.exblog.jp/245101621/
 
 ---
 
@@ -189,3 +190,11 @@ Height=40
 ## 📄 ライセンス
 
 MIT License
+
+---
+
+## 📌 Blog
+
+[ChatGPT] ウインドウのカスケード配置 (左上から斜め下へ重なるように) - タイル型や分割でなく [AutoHotKey v2] (3/1) : 体重と今日食べたもの
+
+https://k1segawa.exblog.jp/245101621/
