@@ -5,25 +5,12 @@ AutoHotkey v2 用 ウインドウカスケードツール
 
 作者: k1segawa
 ライセンス: MIT
-バージョン: 1.0
+バージョン: 1.1
 
-概要:
-開いているウインドウを指定したずらし量で
-カスケード配置します。
-アプリごとにずらす幅と高さを設定可能です。
-
-ホットキー:
-F9  - すべてのウインドウを再配置
-F10 - アクティブウインドウのずらし量を設定
-
-特徴:
-- アプリごとの個別設定対応
-- 未登録時はデフォルト値(24x24)使用
-- Windows 11対応
-- 最小化 / ツール / 子 / フルスクリーン除外
-
-設定ファイル:
-cascade_offsets.ini（自動生成）
+追加:
+- 更新ボタン（閉じずに即反映）
+- 最前面サイズに揃えるチェック追加
+- 更新時に再描画
 
 ============================================================
 */
@@ -35,12 +22,12 @@ global ConfigFile := A_ScriptDir "\cascade_offsets.ini"
 global DefaultSection := "Unregistered"
 global DefaultW := 24
 global DefaultH := 24
+global MatchFrontSize := false
 
 LoadConfig()
 
 F9::CascadeWindows()
 F10::ShowConfigGui()
-
 
 ; ===============================
 ; カスケード処理（累積方式）
@@ -48,38 +35,50 @@ F10::ShowConfigGui()
 CascadeWindows()
 {
     global OffsetConfig, DefaultSection, ConfigFile
+    global MatchFrontSize, DefaultW, DefaultH
 
     winList := WinGetList()
     screenW := A_ScreenWidth
     screenH := A_ScreenHeight
 
     validWindows := []
+    guiHwnd := 0
+
+    ; GUIが存在するならそのhwnd取得
+    for hwnd in winList
+    {
+        title := WinGetTitle("ahk_id " hwnd)
+        if (title = "カスケードずらし量設定")
+        {
+            guiHwnd := hwnd
+            break
+        }
+    }
 
     Loop winList.Length
     {
-        hwnd := winList[winList.Length - A_Index + 1]  ; 奥→手前
+        hwnd := winList[winList.Length - A_Index + 1]
 
         if !WinExist("ahk_id " hwnd)
             continue
 
-        ; 最小化除外
+        if hwnd = guiHwnd
+            continue
+
         if WinGetMinMax("ahk_id " hwnd) = -1
             continue
 
-        ; 親を持つウインドウ除外（子ウインドウ除去）
         if DllCall("GetParent", "ptr", hwnd)
             continue
 
-        ; ツールウインドウ除外
         exStyle := DllCall("GetWindowLongPtr", "ptr", hwnd, "int", -20, "ptr")
-        if (exStyle & 0x80)  ; WS_EX_TOOLWINDOW
+        if (exStyle & 0x80)
             continue
 
-        ; Cloaked除外（UWP/仮想デスクトップ裏）
         cloaked := 0
         DllCall("dwmapi\DwmGetWindowAttribute"
             , "ptr", hwnd
-            , "int", 14  ; DWMWA_CLOAKED
+            , "int", 14
             , "int*", cloaked
             , "int", 4)
         if cloaked
@@ -87,15 +86,20 @@ CascadeWindows()
 
         WinGetPos(&wx, &wy, &ww, &wh, "ahk_id " hwnd)
 
-        ; サイズ0除外
         if (ww <= 0 || wh <= 0)
             continue
 
-        ; フルスクリーン除外
         if (ww >= screenW && wh >= screenH)
             continue
 
         validWindows.Push(hwnd)
+    }
+
+    ; ★ GUIを除いた最前面を取得
+    if MatchFrontSize && validWindows.Length > 0
+    {
+        front := validWindows[validWindows.Length]
+        WinGetPos(&fx, &fy, &fw, &fh, "ahk_id " front)
     }
 
     totalX := 0
@@ -112,11 +116,14 @@ CascadeWindows()
         }
         else
         {
-            dx := IniRead(ConfigFile, DefaultSection, "Width", 24)
-            dy := IniRead(ConfigFile, DefaultSection, "Height", 24)
+            dx := DefaultW
+            dy := DefaultH
         }
 
-        WinMove(totalX, totalY, , , "ahk_id " hwnd)
+        if MatchFrontSize
+            WinMove(totalX, totalY, fw, fh, "ahk_id " hwnd)
+        else
+            WinMove(totalX, totalY, , , "ahk_id " hwnd)
 
         totalX += dx
         totalY += dy
@@ -128,7 +135,7 @@ CascadeWindows()
 ; ===============================
 ShowConfigGui()
 {
-    global OffsetConfig, DefaultW, DefaultH
+    global OffsetConfig, DefaultW, DefaultH, MatchFrontSize
 
     MyGui := Gui("+Resize", "カスケードずらし量設定")
 
@@ -145,53 +152,58 @@ ShowConfigGui()
     }
 
     exeArray := []
+
     for exe, _ in exeSet
         exeArray.Push(exe)
 
     MyGui.Add("Text", , "アプリを選択:")
     ddl := MyGui.Add("DropDownList", "w300 vAppChoice", exeArray)
 
+    ; ★ 初期状態は未選択（空表示）
+    ddl.Value := 0
+
     MyGui.Add("Text", , "ずらす幅:")
-    MyGui.Add("Edit", "w100 vOffsetW")
+    MyGui.Add("Edit", "w100 vOffsetW", DefaultW)
 
     MyGui.Add("Text", , "ずらす高さ:")
-    MyGui.Add("Edit", "w100 vOffsetH")
+    MyGui.Add("Edit", "w100 vOffsetH", DefaultH)
+
+    chk := MyGui.Add("Checkbox", "vMatchFront", "最前面ウインドウサイズに揃える")
+    chk.Value := MatchFrontSize
 
     btnSave := MyGui.Add("Button", "Default", "保存")
+    btnUpdate := MyGui.Add("Button", "x+10", "更新")
 
-    ddl.OnEvent("Change", (*) => LoadOffsetToGui(MyGui))
-    btnSave.OnEvent("Click", (*) => SaveOffset(MyGui))
+    ddl.OnEvent("Change", LoadOffsetToGui)
+    btnSave.OnEvent("Click", SaveOffset)
+    btnUpdate.OnEvent("Click", UpdateOffset)
 
     MyGui.Show()
 }
 
-
-LoadOffsetToGui(MyGui)
+LoadOffsetToGui(ctrl, *)
 {
-    global OffsetConfig, ConfigFile, DefaultSection
+    MyGui := ctrl.Gui
+    global OffsetConfig, DefaultW, DefaultH
 
     exe := MyGui["AppChoice"].Text
 
     if OffsetConfig.Has(exe)
     {
-        ; 登録済みアプリ
         MyGui["OffsetW"].Text := OffsetConfig[exe].w
         MyGui["OffsetH"].Text := OffsetConfig[exe].h
     }
     else
     {
-        ; 未登録アプリ → INIのUnregisteredを読み込む
-        w := IniRead(ConfigFile, DefaultSection, "Width", 24)
-        h := IniRead(ConfigFile, DefaultSection, "Height", 24)
-
-        MyGui["OffsetW"].Text := w
-        MyGui["OffsetH"].Text := h
+        MyGui["OffsetW"].Text := DefaultW
+        MyGui["OffsetH"].Text := DefaultH
     }
 }
 
-SaveOffset(MyGui)
+SaveOffset(ctrl, *)
 {
-    global OffsetConfig, ConfigFile
+    MyGui := ctrl.Gui
+    global OffsetConfig, ConfigFile, MatchFrontSize
 
     MyGui.Submit()
 
@@ -204,11 +216,53 @@ SaveOffset(MyGui)
     IniWrite(w, ConfigFile, exe, "Width")
     IniWrite(h, ConfigFile, exe, "Height")
 
-    MsgBox "保存しました: " exe
+    MatchFrontSize := MyGui["MatchFront"].Value
 
+    MsgBox "保存しました: " exe
     MyGui.Destroy()
 }
 
+UpdateOffset(ctrl, *)
+{
+    MyGui := ctrl.Gui
+    global OffsetConfig, ConfigFile, MatchFrontSize
+
+    MyGui.Submit(false)
+
+    exe := MyGui["AppChoice"].Text
+    w := Integer(MyGui["OffsetW"].Text)
+    h := Integer(MyGui["OffsetH"].Text)
+
+    OffsetConfig[exe] := { w: w, h: h }
+
+    IniWrite(w, ConfigFile, exe, "Width")
+    IniWrite(h, ConfigFile, exe, "Height")
+
+    MatchFrontSize := MyGui["MatchFront"].Value
+
+    CascadeWindows()
+    ForceRedrawAll()
+}
+
+; ===============================
+; 再描画
+; ===============================
+ForceRedrawAll()
+{
+    winList := WinGetList()
+
+    for hwnd in winList
+    {
+        if WinGetMinMax("ahk_id " hwnd) != 0
+            continue
+
+        DllCall("RedrawWindow"
+            , "ptr", hwnd
+            , "ptr", 0
+            , "ptr", 0
+            , "uint", 0x85)
+    }
+}
 
 ; ===============================
 ; 設定読み込み
@@ -218,14 +272,12 @@ LoadConfig()
     global OffsetConfig, ConfigFile
     global DefaultSection, DefaultW, DefaultH
 
-    ; iniが無い場合のみ作成
     if !FileExist(ConfigFile)
     {
         IniWrite(DefaultW, ConfigFile, DefaultSection, "Width")
         IniWrite(DefaultH, ConfigFile, DefaultSection, "Height")
     }
 
-    ; デフォルト値読み込み
     DefaultW := Integer(IniRead(ConfigFile, DefaultSection, "Width", 24))
     DefaultH := Integer(IniRead(ConfigFile, DefaultSection, "Height", 24))
 
@@ -241,5 +293,4 @@ LoadConfig()
 
         OffsetConfig[section] := { w: Integer(w), h: Integer(h) }
     }
-
 }
