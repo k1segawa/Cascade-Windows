@@ -85,7 +85,6 @@ https://www.autohotkey.com/
 6. Select an application and set offset values
 7. Click Update to apply instantly
    or click Save to store and close
-
 After saving, press F9 again anytime to apply.
 An executable (.exe) version is also provided so you can use it without installing AutoHotkey v2.
 ---
