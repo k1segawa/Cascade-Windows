@@ -94,7 +94,7 @@ After saving, press F9 again anytime to apply.
 
 - Windows are stacked diagonally using cumulative offset values.
 - Offset is applied per executable name.
-- If "Match front window size" is enabled:
+- If "Match topmost window size" is enabled:
   - All windows are resized to the topmost window (excluding the GUI).
 - Update triggers forced redraw to prevent rendering artifacts.
 
