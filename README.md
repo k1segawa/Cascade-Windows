@@ -5,7 +5,7 @@ A customizable and intelligent window cascade tool for Windows.
 A window arranging feature similar to the one available in Windows 10.
 
 This script arranges open windows diagonally using configurable offset values.
-You can define different offsets per application and optionally match all window sizes to the front window.
+You can define different offsets per application and optionally match all window sizes to the topmost window.
 
 ---
 
