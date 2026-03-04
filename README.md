@@ -1,25 +1,29 @@
 # Window Cascade Tool for AutoHotkey v2
 
-A simple and customizable window cascade script for Windows.
+A customizable and intelligent window cascade tool for Windows.
 
-This tool arranges open windows diagonally using configurable offset values.  
-You can set different offset values for each application.
+This script arranges open windows diagonally using configurable offset values.
+You can define different offsets per application and optionally match all window sizes to the front window.
 
 ---
 
 ## ✨ Features
 
 - Cascade all open windows with a single hotkey
-- Set custom offset (width/height) per application
-- Uses default value (24x24) when not registered
+- Set custom offset (width / height) per application
+- Default offset (24x24) for unregistered applications
+- Update settings instantly without closing the GUI
+- Optional: Match all windows to the front window size
+- Force redraw after update (prevents visual glitches)
 - Automatically creates INI configuration file
-- Windows 11 compatible
-- Skips:
+- Windows 10 / 11 compatible
+- Automatically skips:
   - Minimized windows
   - Fullscreen windows
   - Tool windows
   - Child windows
   - Cloaked (UWP hidden) windows
+  - The configuration GUI itself
 
 ---
 
@@ -28,7 +32,7 @@ You can set different offset values for each application.
 | Key | Function |
 |------|----------|
 | F9 | Cascade all windows |
-| F10 | Set offset for active window |
+| F10 | Open offset configuration GUI |
 
 ---
 
@@ -36,20 +40,26 @@ You can set different offset values for each application.
 
 The script automatically creates:
 
-    cascade_offsets.ini
+cascade_offsets.ini
 
-Location:  
+Location:
 Same folder as the script.
 
-### Unregistered Section
+### Default (Unregistered) Section
 
 If no offset is registered for an application, the script uses:
 
-    [Unregistered]
-    Width=24
-    Height=24
+[Unregistered]
+Width=24
+Height=24
 
-You can modify this manually if needed.
+You may edit this manually if needed.
+
+Each application is stored as its executable name:
+
+[notepad.exe]
+Width=40
+Height=40
 
 ---
 
@@ -58,7 +68,7 @@ You can modify this manually if needed.
 - Windows 10 / Windows 11
 - AutoHotkey v2.0+
 
-Download AutoHotkey:  
+Download AutoHotkey:
 https://www.autohotkey.com/
 
 ---
@@ -68,18 +78,32 @@ https://www.autohotkey.com/
 1. Install AutoHotkey v2
 2. Run the script
 3. Open multiple windows
-4. Press **F9** to cascade them
-5. Press **F10** on any window to set custom offset
+4. Press F9 to cascade them
+5. Press F10 to open the settings GUI
+6. Select an application and set offset values
+7. Click Update to apply instantly
+   or click Save to store and close
 
-After saving offset values, press F9 again to apply new settings.
+After saving, press F9 again anytime to apply.
+
+---
+
+## 🧠 How It Works
+
+- Windows are stacked diagonally using cumulative offset values.
+- Offset is applied per executable name.
+- If "Match front window size" is enabled:
+  - All windows are resized to the front window (excluding the GUI).
+- Update triggers forced redraw to prevent rendering artifacts.
 
 ---
 
 ## 📌 Notes
 
-- Windows Terminal and modern Windows 11 apps are supported.
-- The script filters special internal windows to prevent layout errors.
-- Offset is cumulative (diagonal stacking).
+- Modern Windows 11 apps are supported.
+- The GUI window is excluded from cascade processing.
+- Offset stacking is cumulative (diagonal layout).
+- Designed to avoid layout conflicts with special system windows.
 
 ---
 
@@ -91,10 +115,11 @@ MIT License
 
 # 日本語説明
 
-AutoHotkey v2 用のウインドウカスケードツールです。
+AutoHotkey v2 用の高機能ウインドウカスケードツールです。
 
-開いているウインドウを、指定したずらし量で斜めに再配置します。  
-アプリごとにずらす幅と高さを設定できます。
+開いているウインドウを、指定したずらし量で斜めに再配置します。
+アプリごとにずらす幅と高さを設定でき、
+最前面ウインドウのサイズに揃えることも可能です。
 
 ---
 
@@ -103,14 +128,18 @@ AutoHotkey v2 用のウインドウカスケードツールです。
 - ホットキー1つで再配置
 - アプリごとのずらし量設定可能
 - 未登録時はデフォルト値 (24x24) を使用
+- 更新ボタンで閉じずに即反映
+- 最前面ウインドウサイズに揃えるオプション
+- 更新時に強制再描画
 - INIファイル自動生成
-- Windows 11対応
+- Windows 10 / 11対応
 - 以下を自動除外:
   - 最小化ウインドウ
   - フルスクリーン
   - ツールウインドウ
   - 子ウインドウ
   - Cloakedウインドウ（UWP内部）
+  - 設定GUI自身
 
 ---
 
@@ -119,7 +148,7 @@ AutoHotkey v2 用のウインドウカスケードツールです。
 | キー | 動作 |
 |------|------|
 | F9 | 全ウインドウ再配置 |
-| F10 | アクティブウインドウのずらし量設定 |
+| F10 | 設定GUIを開く |
 
 ---
 
@@ -127,15 +156,21 @@ AutoHotkey v2 用のウインドウカスケードツールです。
 
 スクリプトと同じフォルダに
 
-    cascade_offsets.ini
+cascade_offsets.ini
 
 が自動生成されます。
 
-未登録アプリは以下の値が使われます。
+未登録アプリは以下の値が使用されます。
 
-    [Unregistered]
-    Width=24
-    Height=24
+[Unregistered]
+Width=24
+Height=24
+
+アプリごとに以下のように保存されます。
+
+[notepad.exe]
+Width=40
+Height=40
 
 ---
 
@@ -145,9 +180,9 @@ AutoHotkey v2 用のウインドウカスケードツールです。
 2. スクリプトを実行
 3. 複数ウインドウを開く
 4. F9キーでカスケード配置
-5. F10キーでずらし量を設定
-
-保存後、再度F9で新しい設定が反映されます。
+5. F10キーで設定GUIを開く
+6. ずらし量を設定
+7. 更新で即反映、保存で保存して閉じる
 
 ---
 
