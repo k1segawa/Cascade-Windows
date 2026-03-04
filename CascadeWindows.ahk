@@ -168,7 +168,7 @@ ShowConfigGui()
     MyGui.Add("Text", , "Offset Height:")
     MyGui.Add("Edit", "w100 vOffsetH", DefaultH)
 
-    chk := MyGui.Add("Checkbox", "vMatchFront", "Match front window size")
+    chk := MyGui.Add("Checkbox", "vMatchFront", "Match topmost window size")
     chk.Value := MatchFrontSize
 
     btnSave := MyGui.Add("Button", "Default", "Save")
@@ -294,3 +294,4 @@ LoadConfig()
         OffsetConfig[section] := { w: Integer(w), h: Integer(h) }
     }
 }
+
