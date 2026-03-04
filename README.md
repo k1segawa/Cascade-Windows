@@ -1,6 +1,7 @@
 # Window Cascade Tool for AutoHotkey v2
 
 A customizable and intelligent window cascade tool for Windows.
+A window arranging feature similar to the one available in Windows 10.
 
 This script arranges open windows diagonally using configurable offset values.
 You can define different offsets per application and optionally match all window sizes to the front window.
@@ -116,7 +117,8 @@ MIT License
 
 # 日本語説明
 
-AutoHotkey v2 用の高機能ウインドウカスケードツールです。
+AutoHotkey v2 で作成されたウインドウカスケードツールです。
+Windows 10にあったウインドウを整列させる機能です。
 
 開いているウインドウを、指定したずらし量で斜めに再配置します。
 アプリごとにずらす幅と高さを設定でき、
