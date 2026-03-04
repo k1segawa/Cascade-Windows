@@ -87,7 +87,7 @@ https://www.autohotkey.com/
    or click Save to store and close
 
 After saving, press F9 again anytime to apply.
-
+An executable (.exe) version is also provided so you can use it without installing AutoHotkey v2.
 ---
 
 ## 🧠 How It Works
@@ -188,7 +188,7 @@ Height=40
 5. F10キーで設定GUIを開く
 6. ずらし量を設定
 7. 更新で即反映、保存で保存して閉じる
-
+AutoHotKey v2をインストールしなくても使えるようExe形式も用意しました。
 ---
 
 ## 📄 ライセンス
