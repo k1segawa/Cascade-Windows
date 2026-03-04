@@ -15,7 +15,7 @@ You can define different offsets per application and optionally match all window
 - Set custom offset (width / height) per application
 - Default offset (24x24) for unregistered applications
 - Update settings instantly without closing the GUI
-- Optional: Match all windows to the front window size
+- Optional: Match all windows to the topmost window size
 - Force redraw after update (prevents visual glitches)
 - Automatically creates INI configuration file
 - Windows 10 / 11 compatible
