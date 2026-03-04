@@ -85,6 +85,7 @@ https://www.autohotkey.com/
 6. Select an application and set offset values
 7. Click Update to apply instantly
    or click Save to store and close
+8. Right-click the [H] icon in the system tray and select "Exit".
 
 * After saving, press F9 again anytime to apply.
 An executable (.exe) version is also provided so you can use it without installing AutoHotkey v2.
@@ -188,6 +189,7 @@ Height=40
 5. F10キーで設定GUIを開く
 6. ずらし量を設定
 7. 更新で即反映、保存で保存して閉じる
+8. タスクトレイの[H]アイコン右クリックでExit
 
 * AutoHotKey v2をインストールしなくても使えるようExe形式も用意しました。
 ---
