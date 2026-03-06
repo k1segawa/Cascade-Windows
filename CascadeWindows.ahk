@@ -5,29 +5,32 @@ Window Cascade Tool for AutoHotkey v2
 
 Author: k1segawa
 License: MIT
-Version: 1.2
+Version: 1.3
 
 Added:
 - Update button (apply instantly without closing)
-- Added checkbox to match topmost window size
-- Force redraw on update
+- Option to match registered window size
+- Redraw after update
+- Size registration button (save frontmost window size)
 
 Overview:
-Cascades open windows using specified offset values.
-You can configure offset width and height per application.
+Cascade open windows using configurable offset values.
+You can set different horizontal and vertical offsets
+for each application.
 
 Hotkeys:
-F9  - Reposition all windows
-F10 - Set offset for the active window
+F9  - Cascade all windows
+F10 - Configure offset for the active window
 
 Features:
-- Per-application configuration supported
-- Uses default value (24x24) when not registered
+- Per-application configuration
+- Uses default value (24x24) if not registered
 - Windows 10 / 11 compatible
-- Excludes minimized / tool / child / fullscreen / cloaked / settings GUI windows
+- Automatically skips:
+  minimized / tool / child / fullscreen / cloaked / config GUI
 
-Configuration file:
-cascade_offsets.ini (auto-generated)
+Configuration File:
+cascade_offsets.ini (created automatically)
 
 ============================================================
 */
@@ -41,54 +44,46 @@ global DefaultW := 24
 global DefaultH := 24
 global MatchTopMostSize := false
 
+global GlobalSizeW := ""
+global GlobalSizeH := ""
+
+global ConfigGuiHwnd := 0
+
 LoadConfig()
 
 F9::CascadeWindows()
 F10::ShowConfigGui()
 
 ; ===============================
-; Cascade processing (cumulative mode)
+; Get valid windows
 ; ===============================
-CascadeWindows()
+GetValidWindows()
 {
-    global OffsetConfig, DefaultSection, ConfigFile
-    global MatchTopMostSize, DefaultW, DefaultH
+    global ConfigGuiHwnd
 
     winList := WinGetList()
     screenW := A_ScreenWidth
     screenH := A_ScreenHeight
 
-    validWindows := []
-    guiHwnd := 0
-
-    ; If GUI exists, get its hwnd
-    for hwnd in winList
-    {
-        title := WinGetTitle("ahk_id " hwnd)
-        if (title = "Cascade Offset Settings")
-        {
-            guiHwnd := hwnd
-            break
-        }
-    }
+    valid := []
 
     Loop winList.Length
     {
         hwnd := winList[winList.Length - A_Index + 1]  ; back → front
 
-        ; Exclude AutoHotkey internal windows
+        ; Exclude invalid AutoHotkey window
         if !WinExist("ahk_id " hwnd)
             continue
 
-        ; Exclude GUI window
-        if hwnd = guiHwnd
+        ; Exclude configuration GUI
+        if hwnd = ConfigGuiHwnd
             continue
 
         ; Exclude minimized windows
         if WinGetMinMax("ahk_id " hwnd) = -1
             continue
 
-        ; Exclude windows that have a parent (remove child windows)
+        ; Exclude child windows
         if DllCall("GetParent", "ptr", hwnd)
             continue
 
@@ -97,35 +92,56 @@ CascadeWindows()
         if (exStyle & 0x80)  ; WS_EX_TOOLWINDOW
             continue
 
-        ; Exclude cloaked windows (UWP / hidden virtual desktop)
+        ; Exclude cloaked windows (UWP / virtual desktop background)
         cloaked := 0
         DllCall("dwmapi\DwmGetWindowAttribute"
             , "ptr", hwnd
             , "int", 14  ; DWMWA_CLOAKED
             , "int*", cloaked
             , "int", 4)
+
         if cloaked
             continue
 
-        WinGetPos(&wx, &wy, &ww, &wh, "ahk_id " hwnd)
+        WinGetPos(&x,&y,&w,&h,"ahk_id " hwnd)
 
-        ; Exclude zero-size windows
-        if (ww <= 0 || wh <= 0)
+        ; Exclude zero-sized windows
+        if (w <= 0 || h <= 0)
             continue
 
         ; Exclude fullscreen windows
-        if (ww >= screenW && wh >= screenH)
+        if (w >= screenW && h >= screenH)
             continue
 
-        validWindows.Push(hwnd)
+        valid.Push(hwnd)
     }
 
-    ;  Get the topmost window excluding GUI
-    if MatchTopMostSize && validWindows.Length > 0
-    {
-        topmost := validWindows[validWindows.Length]
-        WinGetPos(&fx, &fy, &fw, &fh, "ahk_id " topmost)
-    }
+    return valid
+}
+
+; ===============================
+; Get frontmost valid window
+; ===============================
+GetTopValidWindow()
+{
+    valid := GetValidWindows()
+
+    if valid.Length = 0
+        return 0
+
+    return valid[valid.Length]
+}
+
+; ===============================
+; Cascade processing
+; ===============================
+CascadeWindows()
+{
+    global OffsetConfig, DefaultSection, ConfigFile
+    global MatchTopMostSize, DefaultW, DefaultH
+    global GlobalSizeW, GlobalSizeH
+
+    validWindows := GetValidWindows()
 
     totalX := 0
     totalY := 0
@@ -145,8 +161,8 @@ CascadeWindows()
             dy := IniRead(ConfigFile, DefaultSection, "Height", DefaultH)
         }
 
-        if MatchTopMostSize
-            WinMove(totalX, totalY, fw, fh, "ahk_id " hwnd)
+        if MatchTopMostSize && GlobalSizeW != "" && GlobalSizeH != ""
+            WinMove(totalX, totalY, GlobalSizeW, GlobalSizeH, "ahk_id " hwnd)
         else
             WinMove(totalX, totalY, , , "ahk_id " hwnd)
 
@@ -156,13 +172,16 @@ CascadeWindows()
 }
 
 ; ===============================
-; Settings GUI
+; Configuration GUI
 ; ===============================
 ShowConfigGui()
 {
     global OffsetConfig, DefaultW, DefaultH, MatchTopMostSize
+    global ConfigGuiHwnd
 
     MyGui := Gui("+Resize", "Cascade Offset Settings")
+
+    ConfigGuiHwnd := MyGui.Hwnd
 
     winList := WinGetList()
     exeSet := Map()
@@ -181,27 +200,29 @@ ShowConfigGui()
     for exe, _ in exeSet
         exeArray.Push(exe)
 
-    MyGui.Add("Text", , "Select Application:")
+    MyGui.Add("Text", , "Select application:")
     ddl := MyGui.Add("DropDownList", "w300 vAppChoice", exeArray)
 
-    ;  Initial state is unselected (empty display)
+    ; ★ Initial state is unselected (empty display)
     ddl.Value := 0
 
-    MyGui.Add("Text", , "Offset Width:")
+    MyGui.Add("Text", , "Horizontal offset:")
     MyGui.Add("Edit", "w100 vOffsetW", DefaultW)
 
-    MyGui.Add("Text", , "Offset Height:")
+    MyGui.Add("Text", , "Vertical offset:")
     MyGui.Add("Edit", "w100 vOffsetH", DefaultH)
 
-    chk := MyGui.Add("Checkbox", "vMatchTopMost", "Match topmost window size")
+    chk := MyGui.Add("Checkbox", "vMatchTopMost", "Match registered window size")
     chk.Value := MatchTopMostSize
 
     btnSave := MyGui.Add("Button", "Default", "Save")
     btnUpdate := MyGui.Add("Button", "x+10", "Update")
+    btnRegister := MyGui.Add("Button", "x+10", "Register front window size")
 
     ddl.OnEvent("Change", LoadOffsetToGui)
     btnSave.OnEvent("Click", SaveOffset)
     btnUpdate.OnEvent("Click", UpdateOffset)
+    btnRegister.OnEvent("Click", RegisterSize)
 
     MyGui.Show()
 }
@@ -221,7 +242,7 @@ LoadOffsetToGui(ctrl, *)
     }
     else
     {
-        ; Unregistered application → load Unregistered section from INI
+        ; Unregistered application → load from INI Unregistered section
         w := IniRead(ConfigFile, DefaultSection, "Width", DefaultW)
         h := IniRead(ConfigFile, DefaultSection, "Height", DefaultH)
 
@@ -281,6 +302,25 @@ UpdateOffset(ctrl, *)
     ForceRedrawAll()
 }
 
+RegisterSize(ctrl, *)
+{
+    global ConfigFile, DefaultSection
+    global GlobalSizeW, GlobalSizeH
+
+    hwnd := GetTopValidWindow()
+
+    if !hwnd
+        return
+
+    WinGetPos(&x,&y,&w,&h,"ahk_id " hwnd)
+
+    GlobalSizeW := w
+    GlobalSizeH := h
+
+    IniWrite(w, ConfigFile, DefaultSection, "SizeW")
+    IniWrite(h, ConfigFile, DefaultSection, "SizeH")
+}
+
 ; ===============================
 ; Force redraw
 ; ===============================
@@ -308,8 +348,9 @@ LoadConfig()
 {
     global OffsetConfig, ConfigFile
     global DefaultSection, DefaultW, DefaultH
+    global GlobalSizeW, GlobalSizeH
 
-    ; Create INI only if it does not exist
+    ; Create ini only if it does not exist
     if !FileExist(ConfigFile)
     {
         IniWrite(DefaultW, ConfigFile, DefaultSection, "Width")
@@ -319,6 +360,9 @@ LoadConfig()
     ; Load default values
     DefaultW := Integer(IniRead(ConfigFile, DefaultSection, "Width", 24))
     DefaultH := Integer(IniRead(ConfigFile, DefaultSection, "Height", 24))
+
+    GlobalSizeW := IniRead(ConfigFile, DefaultSection, "SizeW", "")
+    GlobalSizeH := IniRead(ConfigFile, DefaultSection, "SizeH", "")
 
     sections := IniRead(ConfigFile)
 
