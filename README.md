@@ -1,4 +1,5 @@
 # Window Cascade Tool for AutoHotkey v2
+
 <p align="center">
 <img src="image/1.cascade.png" width="960">
 </p>
