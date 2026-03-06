@@ -5,12 +5,13 @@ AutoHotkey v2 用 ウインドウカスケードツール
 
 作者: k1segawa
 ライセンス: MIT
-バージョン: 1.2
+バージョン: 1.3
 
 追加:
 - 更新ボタン（閉じずに即反映）
-- 最前面サイズに揃えるチェック追加
+- 登録サイズに揃えるチェック追加
 - 更新時に再描画
+- サイズ登録ボタン（最前面サイズを保存）
 
 概要:
 開いているウインドウを指定したずらし量で
@@ -42,36 +43,28 @@ global DefaultW := 24
 global DefaultH := 24
 global MatchTopMostSize := false
 
+global GlobalSizeW := ""
+global GlobalSizeH := ""
+
+global ConfigGuiHwnd := 0
+
 LoadConfig()
 
 F9::CascadeWindows()
 F10::ShowConfigGui()
 
 ; ===============================
-; カスケード処理（累積方式）
+; 有効ウインドウ取得
 ; ===============================
-CascadeWindows()
+GetValidWindows()
 {
-    global OffsetConfig, DefaultSection, ConfigFile
-    global MatchTopMostSize, DefaultW, DefaultH
+    global ConfigGuiHwnd
 
     winList := WinGetList()
     screenW := A_ScreenWidth
     screenH := A_ScreenHeight
 
-    validWindows := []
-    guiHwnd := 0
-
-    ; GUIが存在するならそのhwnd取得
-    for hwnd in winList
-    {
-        title := WinGetTitle("ahk_id " hwnd)
-        if (title = "カスケードずらし量設定")
-        {
-            guiHwnd := hwnd
-            break
-        }
-    }
+    valid := []
 
     Loop winList.Length
     {
@@ -82,7 +75,7 @@ CascadeWindows()
             continue
 
         ; GUI除外
-        if hwnd = guiHwnd
+        if hwnd = ConfigGuiHwnd
             continue
 
         ; 最小化除外
@@ -105,28 +98,49 @@ CascadeWindows()
             , "int", 14  ; DWMWA_CLOAKED
             , "int*", cloaked
             , "int", 4)
+
         if cloaked
             continue
 
-        WinGetPos(&wx, &wy, &ww, &wh, "ahk_id " hwnd)
+        WinGetPos(&x,&y,&w,&h,"ahk_id " hwnd)
 
         ; サイズ0除外
-        if (ww <= 0 || wh <= 0)
+        if (w <= 0 || h <= 0)
             continue
 
         ; フルスクリーン除外
-        if (ww >= screenW && wh >= screenH)
+        if (w >= screenW && h >= screenH)
             continue
 
-        validWindows.Push(hwnd)
+        valid.Push(hwnd)
     }
 
-    ; ★ GUIを除いた最前面を取得
-    if MatchTopMostSize && validWindows.Length > 0
-    {
-        topmost := validWindows[validWindows.Length]
-        WinGetPos(&fx, &fy, &fw, &fh, "ahk_id " topmost)
-    }
+    return valid
+}
+
+; ===============================
+; 最前面ウインドウ取得
+; ===============================
+GetTopValidWindow()
+{
+    valid := GetValidWindows()
+
+    if valid.Length = 0
+        return 0
+
+    return valid[valid.Length]
+}
+
+; ===============================
+; カスケード処理
+; ===============================
+CascadeWindows()
+{
+    global OffsetConfig, DefaultSection, ConfigFile
+    global MatchTopMostSize, DefaultW, DefaultH
+    global GlobalSizeW, GlobalSizeH
+
+    validWindows := GetValidWindows()
 
     totalX := 0
     totalY := 0
@@ -146,8 +160,8 @@ CascadeWindows()
             dy := IniRead(ConfigFile, DefaultSection, "Height", DefaultH)
         }
 
-        if MatchTopMostSize
-            WinMove(totalX, totalY, fw, fh, "ahk_id " hwnd)
+        if MatchTopMostSize && GlobalSizeW != "" && GlobalSizeH != ""
+            WinMove(totalX, totalY, GlobalSizeW, GlobalSizeH, "ahk_id " hwnd)
         else
             WinMove(totalX, totalY, , , "ahk_id " hwnd)
 
@@ -162,8 +176,11 @@ CascadeWindows()
 ShowConfigGui()
 {
     global OffsetConfig, DefaultW, DefaultH, MatchTopMostSize
+    global ConfigGuiHwnd
 
     MyGui := Gui("+Resize", "カスケードずらし量設定")
+
+    ConfigGuiHwnd := MyGui.Hwnd
 
     winList := WinGetList()
     exeSet := Map()
@@ -194,15 +211,17 @@ ShowConfigGui()
     MyGui.Add("Text", , "ずらす高さ:")
     MyGui.Add("Edit", "w100 vOffsetH", DefaultH)
 
-    chk := MyGui.Add("Checkbox", "vMatchTopMost", "最前面ウインドウサイズに揃える")
+    chk := MyGui.Add("Checkbox", "vMatchTopMost", "登録サイズに揃える")
     chk.Value := MatchTopMostSize
 
     btnSave := MyGui.Add("Button", "Default", "保存")
     btnUpdate := MyGui.Add("Button", "x+10", "更新")
+    btnRegister := MyGui.Add("Button", "x+10", "最前面をサイズ登録")
 
     ddl.OnEvent("Change", LoadOffsetToGui)
     btnSave.OnEvent("Click", SaveOffset)
     btnUpdate.OnEvent("Click", UpdateOffset)
+    btnRegister.OnEvent("Click", RegisterSize)
 
     MyGui.Show()
 }
@@ -282,6 +301,25 @@ UpdateOffset(ctrl, *)
     ForceRedrawAll()
 }
 
+RegisterSize(ctrl, *)
+{
+    global ConfigFile, DefaultSection
+    global GlobalSizeW, GlobalSizeH
+
+    hwnd := GetTopValidWindow()
+
+    if !hwnd
+        return
+
+    WinGetPos(&x,&y,&w,&h,"ahk_id " hwnd)
+
+    GlobalSizeW := w
+    GlobalSizeH := h
+
+    IniWrite(w, ConfigFile, DefaultSection, "SizeW")
+    IniWrite(h, ConfigFile, DefaultSection, "SizeH")
+}
+
 ; ===============================
 ; 再描画
 ; ===============================
@@ -309,6 +347,7 @@ LoadConfig()
 {
     global OffsetConfig, ConfigFile
     global DefaultSection, DefaultW, DefaultH
+    global GlobalSizeW, GlobalSizeH
 
     ; iniが無い場合のみ作成
     if !FileExist(ConfigFile)
@@ -320,6 +359,9 @@ LoadConfig()
     ; デフォルト値読み込み
     DefaultW := Integer(IniRead(ConfigFile, DefaultSection, "Width", 24))
     DefaultH := Integer(IniRead(ConfigFile, DefaultSection, "Height", 24))
+
+    GlobalSizeW := IniRead(ConfigFile, DefaultSection, "SizeW", "")
+    GlobalSizeH := IniRead(ConfigFile, DefaultSection, "SizeH", "")
 
     sections := IniRead(ConfigFile)
 
