@@ -140,6 +140,7 @@ After saving, press **F9** anytime to apply the layout.
 <p align="center">
 <img src="image/2.resize.png" width="960">
 </p>
+
 * Windows are arranged diagonally using cumulative offset values.
 * Offset values are applied per executable name.
 * The **Register Top Window Size** button saves the size of the current frontmost window.
