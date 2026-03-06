@@ -118,8 +118,9 @@ https://www.autohotkey.com/
 
 ## 🚀 How to Use
 <p align="center">
-<img src="image/3.F10.png" width="400">
+<img src="image/3.F10.png" width="800">
 </p>
+
 1. Install **AutoHotkey v2**
 2. Run the script or EXE
 3. Open multiple windows
