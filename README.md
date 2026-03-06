@@ -1,5 +1,7 @@
 # Window Cascade Tool for AutoHotkey v2
-
+<p align="center">
+<img src="image/1.cascade.png" width="960">
+</p>
 A customizable and intelligent window cascade tool for Windows.
 
 A window arranging feature similar to the one available in Windows 10.
@@ -114,7 +116,9 @@ https://www.autohotkey.com/
 ---
 
 ## 🚀 How to Use
-
+<p align="center">
+<img src="image/3.F10.png" width="400">
+</p>
 1. Install **AutoHotkey v2**
 2. Run the script or EXE
 3. Open multiple windows
@@ -133,7 +137,9 @@ After saving, press **F9** anytime to apply the layout.
 ---
 
 ## 🧠 How It Works
-
+<p align="center">
+<img src="image/2.resize.png" width="960">
+</p>
 * Windows are arranged diagonally using cumulative offset values.
 * Offset values are applied per executable name.
 * The **Register Top Window Size** button saves the size of the current frontmost window.
